@@ -25,7 +25,7 @@ BEGIN
     ('employees', 'employees_organization_id_person_id_fkey'),
     ('class_groups', 'class_groups_school_id_academic_year_id_fkey'),
     ('student_enrollments', 'student_enrollments_school_id_class_group_id_fkey'),
-    ('student_attendance', 'student_attendance_school_id_student_enrollment_id_fkey')
+    ('student_attendance', 'student_attendance_school_id_academic_year_id_student_enrollment_id_fkey')
   ) AS expected(table_name, constraint_name)
   WHERE NOT EXISTS (
     SELECT 1 FROM pg_constraint c
