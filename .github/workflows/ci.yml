@@ -4,7 +4,6 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -13,6 +12,26 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: school_os_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: school-os-ci-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d school_os_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGDATABASE: school_os_test
+      PGUSER: postgres
+      PGPASSWORD: school-os-ci-only
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,5 +43,11 @@ jobs:
         run: npm install
       - name: TypeScript check
         run: npm run typecheck
+      - name: Apply database migrations to disposable PostgreSQL
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 -f database/migrations/0001_foundation.sql
+          psql -v ON_ERROR_STOP=1 -f database/migrations/0002_school_master_data.sql
+          psql -v ON_ERROR_STOP=1 -f database/tests/0002_school_master_data_smoke.sql
       - name: Production build
         run: npm run build
