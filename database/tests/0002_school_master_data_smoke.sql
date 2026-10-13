@@ -22,6 +22,7 @@ BEGIN
   FROM (VALUES
     ('students', 'students_organization_id_person_id_fkey'),
     ('students', 'students_organization_id_school_id_fkey'),
+    ('guardian_links', 'guardian_links_organization_id_guardian_person_id_fkey'),
     ('employees', 'employees_organization_id_person_id_fkey'),
     ('class_groups', 'class_groups_school_id_academic_year_id_fkey'),
     ('student_enrollments', 'student_enrollments_school_id_class_group_id_fkey'),
