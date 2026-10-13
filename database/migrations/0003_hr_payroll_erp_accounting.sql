@@ -82,8 +82,8 @@ CREATE TABLE IF NOT EXISTS public.payroll_runs (
   net_total numeric(16,2) NOT NULL DEFAULT 0 CHECK (net_total >= 0),
   calculation_version text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
-  CHECK (period_end >= period_start),
-  CHECK (net_total = gross_total - deduction_total),
+  CONSTRAINT payroll_runs_period_check CHECK (period_end >= period_start),
+  CONSTRAINT payroll_runs_net_total_check CHECK (net_total = gross_total - deduction_total),
   UNIQUE (school_id, payroll_code),
   UNIQUE (school_id, id),
   UNIQUE (school_id, period_start, period_end)
@@ -192,7 +192,7 @@ CREATE TABLE IF NOT EXISTS public.journal_entries (
   UNIQUE (school_id, journal_number),
   UNIQUE (school_id, id),
   FOREIGN KEY (school_id, reverses_entry_id) REFERENCES public.journal_entries(school_id, id) ON DELETE RESTRICT,
-  CHECK (status <> 'posted' OR (debit_total > 0 AND debit_total = credit_total))
+  CONSTRAINT journal_entries_posted_balance_check CHECK (status <> 'posted' OR (debit_total > 0 AND debit_total = credit_total))
 );
 
 CREATE TABLE IF NOT EXISTS public.journal_lines (
