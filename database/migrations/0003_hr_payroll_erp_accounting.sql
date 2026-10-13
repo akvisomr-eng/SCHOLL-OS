@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS public.payroll_runs (
   calculation_version text NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT payroll_runs_period_check CHECK (period_end >= period_start),
-  CONSTRAINT payroll_runs_net_total_check CHECK (net_total = gross_total - deduction_total),
+  CONSTRAINT payroll_runs_net_pay_math_check CHECK (net_total = gross_total - deduction_total),
   UNIQUE (school_id, payroll_code),
   UNIQUE (school_id, id),
   UNIQUE (school_id, period_start, period_end)
