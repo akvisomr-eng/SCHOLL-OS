@@ -147,6 +147,7 @@ CREATE TABLE IF NOT EXISTS public.student_enrollments (
   CHECK (ends_on IS NULL OR ends_on >= starts_on),
   UNIQUE (academic_year_id, student_id),
   UNIQUE (school_id, id),
+  UNIQUE (school_id, academic_year_id, id),
   FOREIGN KEY (school_id, academic_year_id) REFERENCES public.academic_years(school_id, id) ON DELETE RESTRICT,
   FOREIGN KEY (school_id, student_id) REFERENCES public.students(school_id, id) ON DELETE RESTRICT,
   FOREIGN KEY (school_id, class_group_id) REFERENCES public.class_groups(school_id, id) ON DELETE RESTRICT
@@ -173,7 +174,7 @@ CREATE TABLE IF NOT EXISTS public.student_attendance (
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (student_enrollment_id, attendance_date, session_code),
   FOREIGN KEY (school_id, academic_year_id) REFERENCES public.academic_years(school_id, id) ON DELETE RESTRICT,
-  FOREIGN KEY (school_id, student_enrollment_id) REFERENCES public.student_enrollments(school_id, id) ON DELETE RESTRICT
+  FOREIGN KEY (school_id, academic_year_id, student_enrollment_id) REFERENCES public.student_enrollments(school_id, academic_year_id, id) ON DELETE RESTRICT
 );
 
 CREATE INDEX IF NOT EXISTS idx_student_attendance_school_date ON public.student_attendance (school_id, attendance_date);
