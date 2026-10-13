@@ -60,9 +60,10 @@ CREATE INDEX IF NOT EXISTS idx_students_person ON public.students (person_id);
 
 CREATE TABLE IF NOT EXISTS public.guardian_links (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id uuid NOT NULL REFERENCES public.organizations(id) ON DELETE RESTRICT,
   school_id uuid NOT NULL REFERENCES public.schools(id) ON DELETE RESTRICT,
   student_id uuid NOT NULL,
-  guardian_person_id uuid NOT NULL REFERENCES public.people(id) ON DELETE RESTRICT,
+  guardian_person_id uuid NOT NULL,
   relationship_code text NOT NULL CHECK (relationship_code IN ('mother','father','legal_guardian','grandparent','other')),
   is_primary_contact boolean NOT NULL DEFAULT false,
   can_receive_academic_updates boolean NOT NULL DEFAULT true,
@@ -73,7 +74,9 @@ CREATE TABLE IF NOT EXISTS public.guardian_links (
   created_at timestamptz NOT NULL DEFAULT now(),
   CHECK (ends_on IS NULL OR ends_on >= starts_on),
   UNIQUE (student_id, guardian_person_id, relationship_code, starts_on),
-  FOREIGN KEY (school_id, student_id) REFERENCES public.students(school_id, id) ON DELETE RESTRICT
+  FOREIGN KEY (organization_id, school_id) REFERENCES public.schools(organization_id, id) ON DELETE RESTRICT,
+  FOREIGN KEY (school_id, student_id) REFERENCES public.students(school_id, id) ON DELETE RESTRICT,
+  FOREIGN KEY (organization_id, guardian_person_id) REFERENCES public.people(organization_id, id) ON DELETE RESTRICT
 );
 
 CREATE INDEX IF NOT EXISTS idx_guardian_links_student ON public.guardian_links (school_id, student_id);
