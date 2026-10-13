@@ -24,6 +24,9 @@ CREATE TABLE IF NOT EXISTS public.people (
   UNIQUE (organization_id, id)
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS uq_schools_organization_id_id ON public.schools (organization_id, id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_academic_years_school_id_id ON public.academic_years (school_id, id);
+
 CREATE INDEX IF NOT EXISTS idx_people_org_name ON public.people (organization_id, legal_name);
 CREATE INDEX IF NOT EXISTS idx_people_org_status ON public.people (organization_id, record_status);
 
@@ -31,7 +34,7 @@ CREATE TABLE IF NOT EXISTS public.students (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id uuid NOT NULL REFERENCES public.organizations(id) ON DELETE RESTRICT,
   school_id uuid NOT NULL REFERENCES public.schools(id) ON DELETE RESTRICT,
-  person_id uuid NOT NULL REFERENCES public.people(id) ON DELETE RESTRICT,
+  person_id uuid NOT NULL,
   local_student_number text NOT NULL,
   nisn text,
   previous_school_name text,
@@ -45,6 +48,8 @@ CREATE TABLE IF NOT EXISTS public.students (
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (school_id, local_student_number),
   UNIQUE (school_id, id),
+  FOREIGN KEY (organization_id, school_id) REFERENCES public.schools(organization_id, id) ON DELETE RESTRICT,
+  FOREIGN KEY (organization_id, person_id) REFERENCES public.people(organization_id, id) ON DELETE RESTRICT,
   CHECK (withdrawal_date IS NULL OR admission_date IS NULL OR withdrawal_date >= admission_date)
 );
 
@@ -56,7 +61,7 @@ CREATE INDEX IF NOT EXISTS idx_students_person ON public.students (person_id);
 CREATE TABLE IF NOT EXISTS public.guardian_links (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   school_id uuid NOT NULL REFERENCES public.schools(id) ON DELETE RESTRICT,
-  student_id uuid NOT NULL REFERENCES public.students(id) ON DELETE RESTRICT,
+  student_id uuid NOT NULL,
   guardian_person_id uuid NOT NULL REFERENCES public.people(id) ON DELETE RESTRICT,
   relationship_code text NOT NULL CHECK (relationship_code IN ('mother','father','legal_guardian','grandparent','other')),
   is_primary_contact boolean NOT NULL DEFAULT false,
@@ -67,7 +72,8 @@ CREATE TABLE IF NOT EXISTS public.guardian_links (
   ends_on date,
   created_at timestamptz NOT NULL DEFAULT now(),
   CHECK (ends_on IS NULL OR ends_on >= starts_on),
-  UNIQUE (student_id, guardian_person_id, relationship_code, starts_on)
+  UNIQUE (student_id, guardian_person_id, relationship_code, starts_on),
+  FOREIGN KEY (school_id, student_id) REFERENCES public.students(school_id, id) ON DELETE RESTRICT
 );
 
 CREATE INDEX IF NOT EXISTS idx_guardian_links_student ON public.guardian_links (school_id, student_id);
@@ -77,7 +83,7 @@ CREATE TABLE IF NOT EXISTS public.employees (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id uuid NOT NULL REFERENCES public.organizations(id) ON DELETE RESTRICT,
   school_id uuid NOT NULL REFERENCES public.schools(id) ON DELETE RESTRICT,
-  person_id uuid NOT NULL REFERENCES public.people(id) ON DELETE RESTRICT,
+  person_id uuid NOT NULL,
   employee_number text NOT NULL,
   nuptk text,
   employment_type text NOT NULL CHECK (employment_type IN ('permanent','fixed_term','part_time','honorary','outsourced','volunteer','other')),
@@ -93,6 +99,8 @@ CREATE TABLE IF NOT EXISTS public.employees (
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (school_id, employee_number),
   UNIQUE (school_id, id),
+  FOREIGN KEY (organization_id, school_id) REFERENCES public.schools(organization_id, id) ON DELETE RESTRICT,
+  FOREIGN KEY (organization_id, person_id) REFERENCES public.people(organization_id, id) ON DELETE RESTRICT,
   CHECK (end_date IS NULL OR end_date >= start_date)
 );
 
@@ -104,19 +112,21 @@ CREATE INDEX IF NOT EXISTS idx_employees_person ON public.employees (person_id);
 CREATE TABLE IF NOT EXISTS public.class_groups (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   school_id uuid NOT NULL REFERENCES public.schools(id) ON DELETE RESTRICT,
-  academic_year_id uuid NOT NULL REFERENCES public.academic_years(id) ON DELETE RESTRICT,
+  academic_year_id uuid NOT NULL,
   class_code text NOT NULL,
   class_name text NOT NULL,
   education_level text NOT NULL CHECK (education_level IN ('KB','TK','SD','SMP','SMA','SMK','OTHER')),
   grade_label text NOT NULL,
   capacity integer CHECK (capacity IS NULL OR capacity > 0),
-  homeroom_employee_id uuid REFERENCES public.employees(id) ON DELETE RESTRICT,
+  homeroom_employee_id uuid,
   room_label text,
   group_status text NOT NULL DEFAULT 'active' CHECK (group_status IN ('planned','active','closed')),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (academic_year_id, class_code),
-  UNIQUE (school_id, id)
+  UNIQUE (school_id, id),
+  FOREIGN KEY (school_id, academic_year_id) REFERENCES public.academic_years(school_id, id) ON DELETE RESTRICT,
+  FOREIGN KEY (school_id, homeroom_employee_id) REFERENCES public.employees(school_id, id) ON DELETE RESTRICT
 );
 
 CREATE INDEX IF NOT EXISTS idx_class_groups_school_year ON public.class_groups (school_id, academic_year_id, group_status);
@@ -124,9 +134,9 @@ CREATE INDEX IF NOT EXISTS idx_class_groups_school_year ON public.class_groups (
 CREATE TABLE IF NOT EXISTS public.student_enrollments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   school_id uuid NOT NULL REFERENCES public.schools(id) ON DELETE RESTRICT,
-  academic_year_id uuid NOT NULL REFERENCES public.academic_years(id) ON DELETE RESTRICT,
-  student_id uuid NOT NULL REFERENCES public.students(id) ON DELETE RESTRICT,
-  class_group_id uuid NOT NULL REFERENCES public.class_groups(id) ON DELETE RESTRICT,
+  academic_year_id uuid NOT NULL,
+  student_id uuid NOT NULL,
+  class_group_id uuid NOT NULL,
   enrollment_status text NOT NULL DEFAULT 'active' CHECK (enrollment_status IN ('active','moved','completed','cancelled')),
   starts_on date NOT NULL,
   ends_on date,
@@ -135,7 +145,11 @@ CREATE TABLE IF NOT EXISTS public.student_enrollments (
   approved_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
   CHECK (ends_on IS NULL OR ends_on >= starts_on),
-  UNIQUE (academic_year_id, student_id)
+  UNIQUE (academic_year_id, student_id),
+  UNIQUE (school_id, id),
+  FOREIGN KEY (school_id, academic_year_id) REFERENCES public.academic_years(school_id, id) ON DELETE RESTRICT,
+  FOREIGN KEY (school_id, student_id) REFERENCES public.students(school_id, id) ON DELETE RESTRICT,
+  FOREIGN KEY (school_id, class_group_id) REFERENCES public.class_groups(school_id, id) ON DELETE RESTRICT
 );
 
 CREATE INDEX IF NOT EXISTS idx_student_enrollments_school_class ON public.student_enrollments (school_id, class_group_id, enrollment_status);
@@ -144,8 +158,8 @@ CREATE INDEX IF NOT EXISTS idx_student_enrollments_student ON public.student_enr
 CREATE TABLE IF NOT EXISTS public.student_attendance (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   school_id uuid NOT NULL REFERENCES public.schools(id) ON DELETE RESTRICT,
-  academic_year_id uuid NOT NULL REFERENCES public.academic_years(id) ON DELETE RESTRICT,
-  student_enrollment_id uuid NOT NULL REFERENCES public.student_enrollments(id) ON DELETE RESTRICT,
+  academic_year_id uuid NOT NULL,
+  student_enrollment_id uuid NOT NULL,
   attendance_date date NOT NULL,
   session_code text NOT NULL DEFAULT 'full_day',
   attendance_status text NOT NULL CHECK (attendance_status IN ('present','sick','permitted','absent','late','left_early','school_activity')),
@@ -157,7 +171,9 @@ CREATE TABLE IF NOT EXISTS public.student_attendance (
   reviewed_at timestamptz,
   correction_of_id uuid REFERENCES public.student_attendance(id) ON DELETE RESTRICT,
   created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (student_enrollment_id, attendance_date, session_code)
+  UNIQUE (student_enrollment_id, attendance_date, session_code),
+  FOREIGN KEY (school_id, academic_year_id) REFERENCES public.academic_years(school_id, id) ON DELETE RESTRICT,
+  FOREIGN KEY (school_id, student_enrollment_id) REFERENCES public.student_enrollments(school_id, id) ON DELETE RESTRICT
 );
 
 CREATE INDEX IF NOT EXISTS idx_student_attendance_school_date ON public.student_attendance (school_id, attendance_date);
