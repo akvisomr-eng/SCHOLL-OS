@@ -174,7 +174,7 @@ CREATE TABLE IF NOT EXISTS public.student_attendance (
   created_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (student_enrollment_id, attendance_date, session_code),
   FOREIGN KEY (school_id, academic_year_id) REFERENCES public.academic_years(school_id, id) ON DELETE RESTRICT,
-  FOREIGN KEY (school_id, academic_year_id, student_enrollment_id) REFERENCES public.student_enrollments(school_id, academic_year_id, id) ON DELETE RESTRICT
+  CONSTRAINT student_attendance_enrollment_scope_fkey FOREIGN KEY (school_id, academic_year_id, student_enrollment_id) REFERENCES public.student_enrollments(school_id, academic_year_id, id) ON DELETE RESTRICT
 );
 
 CREATE INDEX IF NOT EXISTS idx_student_attendance_school_date ON public.student_attendance (school_id, attendance_date);
