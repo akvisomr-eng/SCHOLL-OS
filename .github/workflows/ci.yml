@@ -49,5 +49,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f database/migrations/0001_foundation.sql
           psql -v ON_ERROR_STOP=1 -f database/migrations/0002_school_master_data.sql
           psql -v ON_ERROR_STOP=1 -f database/tests/0002_school_master_data_smoke.sql
+          psql -v ON_ERROR_STOP=1 -f database/migrations/0003_hr_payroll_erp_accounting.sql
+          psql -v ON_ERROR_STOP=1 -f database/tests/0003_hr_payroll_erp_accounting_smoke.sql
       - name: Production build
         run: npm run build
